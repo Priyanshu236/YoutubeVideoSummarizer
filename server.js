@@ -131,4 +131,4 @@ app.post("/", async (req, res) => {
 
 })
 
-app.listen(port, () => { console.log("server listening") })
+app.listen(process.env.PORT || port, () => { console.log("server listening") })
