@@ -7,16 +7,18 @@ import path from 'path';
 import fs from "fs"
 const app = express()
 const port = 3000
+const __dirname = path.resolve();
 
+app.use(express.static(__dirname + '/public'));
 
 app.get('/download', (req, res) => {
   const filePath = '/path/to/output.txt';
   res.download(filePath);
 });
 
+
 var str = ""
 const API_KEY = "1912d88a146f0952e1ecb4547b180d25"
-const __dirname = path.resolve();
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 
