@@ -6,8 +6,10 @@ import { getSubtitles } from 'youtube-captions-scraper';
 import path from 'path';
 import fs from "fs"
 const app = express()
-const port = 3000
 const __dirname = path.resolve();
+import * as dotenv from 'dotenv'
+dotenv.config()
+const port = 3000
 
 app.use(express.static(__dirname + '/public'));
 
@@ -18,7 +20,7 @@ app.get('/download', (req, res) => {
 
 
 var str = ""
-const API_KEY = "1912d88a146f0952e1ecb4547b180d25"
+const API_KEY = process.env.API_KEY
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 
@@ -54,11 +56,11 @@ function GetSummarizedText(str) {
     axios.post(apiUrl, formData, axiosConfig)
       .then(response => {
         // handle the API response
-        resolve(response)
+       return resolve(response.data.summary)
       })
       .catch(error => {
         // handle the API error
-        reject(error)
+        return reject(new Error(error))
       });
   })
 
@@ -66,20 +68,27 @@ function GetSummarizedText(str) {
 
 function GetText(videoId) {
 
-  return new Promise((resolve) => {
-  getSubtitles({
-    videoID: videoId, // youtube video id
-    lang: 'en' // default: `en`
-  }).then((captions) => {
+  return new Promise((resolve, reject) => {
+    getSubtitles({
+      videoID: videoId, // youtube video id
+      lang: 'en' // default: `en`
+    }).then((captions) => {
 
-    captions.forEach(function (obj) { str += obj.text });
+      captions.forEach(function (obj) { str += obj.text });
 
-    resolve(str)
-    // create a new FormData object
-  });
-})
+      return resolve(str)
+      // create a new FormData object
+    }).catch(error => {
+      // handle the API error
+      console.log("$$$$$$$$$$$$$$$$$")
+      return reject(new Error(error))
+    });;
+  })
 }
 
+async function errorHandler() {
+  fs.writeFileSync('output.txt', "NO Captions")
+}
 
 
 
@@ -90,39 +99,35 @@ app.get("/", (req, res) => {
 app.post("/", async (req, res) => {
   let extractUrl = req.body.VideoLink
   let ind = extractUrl.indexOf('=')
+  console.log(ind)
   ind += 1
   let videoId = extractUrl.substr(ind, 11)
-
-  console.log("hello1")
-  let text,response
-  try{
-    text = await GetText(videoId)
-  }catch(err){
-    console.log(err)
+  if (ind == 0 || videoId.length != 11) {
+    res.redirect("/"); return;
   }
 
-  console.log("hello2")
+
+  let text, response
   try {
-    
-    console.log("hello3")
+   
+    console.log("hello1")
+    text = await GetText(videoId)
+    console.log("hello2")
     response = await GetSummarizedText(text)
-    
-  }
-  catch (error) {
-    response=error
-  }
-
-  try{
-    console.log("hello4")
-    fs.writeFileSync('output.txt', response.data.summary)
+    console.log("hello3")
+    fs.writeFileSync('output.txt', response)
     console.log('File saved successfully!');
     res.download(`${__dirname}/output.txt`);
-  }
-  catch(err)
-  {
 
+  } catch (err) {
+    console.log("Error Block")
+    await errorHandler()
   }
-  console.log("hello5")
+  finally{
+    console.log("finally")
+    res.download(`${__dirname}/output.txt`);
+  }
+  
 
 })
 
